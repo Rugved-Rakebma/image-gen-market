@@ -1,0 +1,15 @@
+{
+  "name": "image-gen-market",
+  "owner": {
+    "name": "Rugved Ambekar",
+    "url": "https://github.com/Rugved-Rakebma"
+  },
+  "plugins": [
+    {
+      "name": "image-gen",
+      "source": "./",
+      "description": "AI image generation and editing using Google Gemini",
+      "version": "1.0.0"
+    }
+  ]
+}

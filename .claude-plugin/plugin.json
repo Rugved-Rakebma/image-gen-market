@@ -1,0 +1,23 @@
+{
+  "name": "image-gen",
+  "version": "1.0.0",
+  "description": "AI image generation and editing using Google Gemini. Generate from text, edit existing images, apply brand profiles for style consistency.",
+  "author": {
+    "name": "Rugved Ambekar",
+    "url": "https://github.com/Rugved-Rakebma"
+  },
+  "repository": "https://github.com/Rugved-Rakebma/image-gen-market",
+  "license": "MIT",
+  "commands": "./commands/",
+  "keywords": [
+    "image-generation",
+    "ai-image",
+    "gemini",
+    "text-to-image",
+    "image-editing",
+    "brand-consistency",
+    "design",
+    "claude-code",
+    "claude-code-plugin"
+  ]
+}

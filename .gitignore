@@ -1,0 +1,19 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.tgz
+*.log
+
+# Image generation output artifacts
+.image-gen/
+
+# Environment files
+.env
+.env.local
+!.env.example
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo

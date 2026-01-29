@@ -1,0 +1,58 @@
+{
+  "name": "image-gen",
+  "version": "1.0.0",
+  "description": "AI image generation and editing using Google Gemini. Generate from text, edit existing images, apply brand profiles for style consistency.",
+  "main": "dist/cli.js",
+  "bin": {
+    "image-gen-cli": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "commands/",
+    "brand-profiles/",
+    ".claude-plugin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli.js --banner:js='#!/usr/bin/env node' --external:@google/genai",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "image-generation",
+    "ai-image",
+    "gemini",
+    "text-to-image",
+    "image-editing",
+    "brand-consistency",
+    "design",
+    "claude-code",
+    "claude-code-plugin"
+  ],
+  "author": {
+    "name": "Rugved Ambekar",
+    "url": "https://github.com/Rugved-Rakebma"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rugved-Rakebma/image-gen-market.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rugved-Rakebma/image-gen-market/issues"
+  },
+  "homepage": "https://github.com/Rugved-Rakebma/image-gen-market#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^0.7.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0"
+  }
+}
