@@ -12,6 +12,7 @@
     "commands/",
     "brand-profiles/",
     ".claude-plugin/",
+    "CLAUDE.md",
     "README.md",
     "LICENSE"
   ],
