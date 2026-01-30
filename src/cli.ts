@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { generate } from './generate';
 import { edit } from './edit';
+import { setup, addCategory, buildCommands, listCategories } from './init';
 
 // Load .env.local from the plugin root (no external dependency)
 function loadEnvLocal() {
@@ -47,6 +48,8 @@ program
   .option('--size <size>', 'Image size hint')
   .option('-r, --ref <paths...>', 'Reference image paths')
   .option('--brand <path>', 'Brand profile markdown file path')
+  .option('-c, --category <name>', 'Category name (loads from image-gen/<category>/)')
+  .option('--image-gen-dir <path>', 'Path to image-gen directory', 'image-gen')
   .option('--check-env', 'Only check if GEMINI_API_KEY is set')
   .action(async (prompt: string, options: {
     output?: string;
@@ -56,6 +59,8 @@ program
     size?: string;
     ref?: string[];
     brand?: string;
+    category?: string;
+    imageGenDir?: string;
     checkEnv?: boolean;
   }) => {
     if (options.checkEnv) {
@@ -76,6 +81,8 @@ program
       size: options.size,
       ref: options.ref,
       brand: options.brand,
+      category: options.category,
+      imageGenDir: options.imageGenDir,
     });
     console.log(JSON.stringify(result, null, 2));
     if (!result.success) process.exit(1);
@@ -116,6 +123,71 @@ program
       model: options.model,
       size: options.size,
     });
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.success) process.exit(1);
+  });
+
+// Setup command (first-time initialization)
+program
+  .command('setup')
+  .description('Initialize image-gen directory with brand.md and optional first category')
+  .option('--image-gen-dir <path>', 'Path to image-gen directory', 'image-gen')
+  .option('-c, --category <name>', 'Create first category during setup')
+  .action(async (options: {
+    imageGenDir?: string;
+    category?: string;
+  }) => {
+    const result = await setup({
+      imageGenDir: options.imageGenDir,
+      category: options.category,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.success) process.exit(1);
+  });
+
+// Add category command
+program
+  .command('add-category')
+  .description('Add a new image category')
+  .argument('<name>', 'Category name (e.g., property-interiors, avatars)')
+  .option('--image-gen-dir <path>', 'Path to image-gen directory', 'image-gen')
+  .action(async (name: string, options: { imageGenDir?: string }) => {
+    const result = await addCategory({
+      imageGenDir: options.imageGenDir,
+      category: name,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.success) process.exit(1);
+  });
+
+// Build commands
+program
+  .command('build-cmds')
+  .description('Generate slash commands from discovered categories')
+  .option('--image-gen-dir <path>', 'Path to image-gen directory', 'image-gen')
+  .option('--output-dir <path>', 'Output directory for generated commands', '.claude/commands/image-gen')
+  .option('-f, --force', 'Overwrite existing command files')
+  .action(async (options: {
+    imageGenDir?: string;
+    outputDir?: string;
+    force?: boolean;
+  }) => {
+    const result = await buildCommands({
+      imageGenDir: options.imageGenDir,
+      outputDir: options.outputDir,
+      force: options.force,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    if (!result.success) process.exit(1);
+  });
+
+// List categories command
+program
+  .command('list-categories')
+  .description('List discovered categories from image-gen directory')
+  .option('--image-gen-dir <path>', 'Path to image-gen directory', 'image-gen')
+  .action(async (options: { imageGenDir?: string }) => {
+    const result = await listCategories(options.imageGenDir);
     console.log(JSON.stringify(result, null, 2));
     if (!result.success) process.exit(1);
   });

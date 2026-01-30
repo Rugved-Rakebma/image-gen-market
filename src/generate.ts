@@ -7,6 +7,7 @@ import {
   augmentPromptWithBrand,
   resolveOutputPath,
   saveImage,
+  loadCategory,
 } from './utils';
 
 interface GenerateOptions {
@@ -18,6 +19,8 @@ interface GenerateOptions {
   output?: string;
   ref?: string[];
   brand?: string;
+  category?: string;
+  imageGenDir?: string;
 }
 
 export async function generate(options: GenerateOptions): Promise<CommandResult> {
@@ -28,8 +31,22 @@ export async function generate(options: GenerateOptions): Promise<CommandResult>
 
     const contents: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
 
-    // Add brand reference images and augment prompt
-    if (options.brand) {
+    // Load category context (includes brand + category style + references)
+    if (options.category) {
+      const categoryContext = loadCategory(options.category, options.imageGenDir || 'image-gen');
+      prompt = augmentPromptWithBrand(prompt, categoryContext.brand);
+
+      // Add category reference images
+      for (const refPath of categoryContext.references) {
+        try {
+          contents.push(fileToInlinePart(refPath));
+        } catch {
+          // Skip missing reference images
+        }
+      }
+    }
+    // Legacy: Add brand reference images and augment prompt
+    else if (options.brand) {
       const brand = parseBrandProfile(options.brand);
       prompt = augmentPromptWithBrand(prompt, brand);
 
@@ -120,6 +137,7 @@ export async function generate(options: GenerateOptions): Promise<CommandResult>
         outputPath,
         model,
         aspectRatio: options.aspect || 'default',
+        category: options.category || null,
         prompt,
         textResponse,
       },

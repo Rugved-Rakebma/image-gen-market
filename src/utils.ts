@@ -159,3 +159,95 @@ export function saveImage(base64Data: string, outputPath: string): void {
   }
   fs.writeFileSync(outputPath, Buffer.from(base64Data, 'base64'));
 }
+
+export function mergeBrandProfiles(base: BrandProfile, overlay: BrandProfile): BrandProfile {
+  return {
+    name: overlay.name || base.name,
+    colors: { ...base.colors, ...overlay.colors },
+    style: [base.style, overlay.style].filter(Boolean).join(', '),
+    tone: [base.tone, overlay.tone].filter(Boolean).join(', '),
+    references: [...base.references, ...overlay.references],
+    body: [base.body, overlay.body].filter(s => s.trim()).join('\n\n'),
+  };
+}
+
+export function discoverCategories(imageGenDir: string): string[] {
+  const absDir = path.resolve(imageGenDir);
+  if (!fs.existsSync(absDir)) {
+    return [];
+  }
+  const entries = fs.readdirSync(absDir, { withFileTypes: true });
+  const categories: string[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const stylePath = path.join(absDir, entry.name, 'style.md');
+      if (fs.existsSync(stylePath)) {
+        categories.push(entry.name);
+      }
+    }
+  }
+  return categories.sort();
+}
+
+export function loadCategoryReferences(categoryDir: string): string[] {
+  const refsDir = path.join(categoryDir, 'references');
+  if (!fs.existsSync(refsDir)) {
+    return [];
+  }
+  const entries = fs.readdirSync(refsDir, { withFileTypes: true });
+  const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'];
+  const refs: string[] = [];
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (imageExts.includes(ext)) {
+        refs.push(path.join(refsDir, entry.name));
+      }
+    }
+  }
+  return refs.sort();
+}
+
+export interface CategoryContext {
+  brand: BrandProfile;
+  references: string[];
+  categoryName: string;
+}
+
+export function loadCategory(categoryName: string, imageGenDir: string = 'image-gen'): CategoryContext {
+  const absDir = path.resolve(imageGenDir);
+  const brandPath = path.join(absDir, 'brand.md');
+  const categoryDir = path.join(absDir, categoryName);
+  const stylePath = path.join(categoryDir, 'style.md');
+
+  // Load base brand (optional)
+  let baseBrand: BrandProfile = {
+    name: '',
+    colors: {},
+    style: '',
+    tone: '',
+    references: [],
+    body: '',
+  };
+  if (fs.existsSync(brandPath)) {
+    baseBrand = parseBrandProfile(brandPath);
+  }
+
+  // Load category style (required)
+  if (!fs.existsSync(stylePath)) {
+    throw new Error(`Category style not found: ${stylePath}`);
+  }
+  const categoryStyle = parseBrandProfile(stylePath);
+
+  // Merge profiles
+  const mergedBrand = mergeBrandProfiles(baseBrand, categoryStyle);
+
+  // Load references from category directory
+  const categoryRefs = loadCategoryReferences(categoryDir);
+
+  return {
+    brand: mergedBrand,
+    references: [...mergedBrand.references, ...categoryRefs],
+    categoryName,
+  };
+}

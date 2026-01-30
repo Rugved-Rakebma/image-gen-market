@@ -966,8 +966,8 @@ var require_command = __commonJS({
   "node_modules/commander/lib/command.js"(exports2) {
     var EventEmitter = require("node:events").EventEmitter;
     var childProcess = require("node:child_process");
-    var path3 = require("node:path");
-    var fs3 = require("node:fs");
+    var path4 = require("node:path");
+    var fs4 = require("node:fs");
     var process2 = require("node:process");
     var { Argument: Argument2, humanReadableArgName } = require_argument();
     var { CommanderError: CommanderError2 } = require_error();
@@ -1909,13 +1909,13 @@ Expecting one of '${allowedValues.join("', '")}'`);
         let launchWithNode = false;
         const sourceExt = [".js", ".ts", ".tsx", ".mjs", ".cjs"];
         function findFile(baseDir, baseName) {
-          const localBin = path3.resolve(baseDir, baseName);
-          if (fs3.existsSync(localBin))
+          const localBin = path4.resolve(baseDir, baseName);
+          if (fs4.existsSync(localBin))
             return localBin;
-          if (sourceExt.includes(path3.extname(baseName)))
+          if (sourceExt.includes(path4.extname(baseName)))
             return void 0;
           const foundExt = sourceExt.find(
-            (ext) => fs3.existsSync(`${localBin}${ext}`)
+            (ext) => fs4.existsSync(`${localBin}${ext}`)
           );
           if (foundExt)
             return `${localBin}${foundExt}`;
@@ -1928,21 +1928,21 @@ Expecting one of '${allowedValues.join("', '")}'`);
         if (this._scriptPath) {
           let resolvedScriptPath;
           try {
-            resolvedScriptPath = fs3.realpathSync(this._scriptPath);
+            resolvedScriptPath = fs4.realpathSync(this._scriptPath);
           } catch (err) {
             resolvedScriptPath = this._scriptPath;
           }
-          executableDir = path3.resolve(
-            path3.dirname(resolvedScriptPath),
+          executableDir = path4.resolve(
+            path4.dirname(resolvedScriptPath),
             executableDir
           );
         }
         if (executableDir) {
           let localFile = findFile(executableDir, executableFile);
           if (!localFile && !subcommand._executableFile && this._scriptPath) {
-            const legacyName = path3.basename(
+            const legacyName = path4.basename(
               this._scriptPath,
-              path3.extname(this._scriptPath)
+              path4.extname(this._scriptPath)
             );
             if (legacyName !== this._name) {
               localFile = findFile(
@@ -1953,7 +1953,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
           }
           executableFile = localFile || executableFile;
         }
-        launchWithNode = sourceExt.includes(path3.extname(executableFile));
+        launchWithNode = sourceExt.includes(path4.extname(executableFile));
         let proc;
         if (process2.platform !== "win32") {
           if (launchWithNode) {
@@ -2810,7 +2810,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @return {Command}
        */
       nameFromFilename(filename) {
-        this._name = path3.basename(filename, path3.extname(filename));
+        this._name = path4.basename(filename, path4.extname(filename));
         return this;
       }
       /**
@@ -2824,10 +2824,10 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [path]
        * @return {(string|null|Command)}
        */
-      executableDir(path4) {
-        if (path4 === void 0)
+      executableDir(path5) {
+        if (path5 === void 0)
           return this._executableDir;
-        this._executableDir = path4;
+        this._executableDir = path5;
         return this;
       }
       /**
@@ -3075,8 +3075,8 @@ var {
 } = import_index.default;
 
 // src/cli.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
+var fs3 = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
 
 // src/utils.ts
 var import_genai = require("@google/genai");
@@ -3204,6 +3204,79 @@ function saveImage(base64Data, outputPath) {
   }
   fs.writeFileSync(outputPath, Buffer.from(base64Data, "base64"));
 }
+function mergeBrandProfiles(base, overlay) {
+  return {
+    name: overlay.name || base.name,
+    colors: { ...base.colors, ...overlay.colors },
+    style: [base.style, overlay.style].filter(Boolean).join(", "),
+    tone: [base.tone, overlay.tone].filter(Boolean).join(", "),
+    references: [...base.references, ...overlay.references],
+    body: [base.body, overlay.body].filter((s) => s.trim()).join("\n\n")
+  };
+}
+function discoverCategories(imageGenDir) {
+  const absDir = path.resolve(imageGenDir);
+  if (!fs.existsSync(absDir)) {
+    return [];
+  }
+  const entries = fs.readdirSync(absDir, { withFileTypes: true });
+  const categories = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const stylePath = path.join(absDir, entry.name, "style.md");
+      if (fs.existsSync(stylePath)) {
+        categories.push(entry.name);
+      }
+    }
+  }
+  return categories.sort();
+}
+function loadCategoryReferences(categoryDir) {
+  const refsDir = path.join(categoryDir, "references");
+  if (!fs.existsSync(refsDir)) {
+    return [];
+  }
+  const entries = fs.readdirSync(refsDir, { withFileTypes: true });
+  const imageExts = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"];
+  const refs = [];
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (imageExts.includes(ext)) {
+        refs.push(path.join(refsDir, entry.name));
+      }
+    }
+  }
+  return refs.sort();
+}
+function loadCategory(categoryName, imageGenDir = "image-gen") {
+  const absDir = path.resolve(imageGenDir);
+  const brandPath = path.join(absDir, "brand.md");
+  const categoryDir = path.join(absDir, categoryName);
+  const stylePath = path.join(categoryDir, "style.md");
+  let baseBrand = {
+    name: "",
+    colors: {},
+    style: "",
+    tone: "",
+    references: [],
+    body: ""
+  };
+  if (fs.existsSync(brandPath)) {
+    baseBrand = parseBrandProfile(brandPath);
+  }
+  if (!fs.existsSync(stylePath)) {
+    throw new Error(`Category style not found: ${stylePath}`);
+  }
+  const categoryStyle = parseBrandProfile(stylePath);
+  const mergedBrand = mergeBrandProfiles(baseBrand, categoryStyle);
+  const categoryRefs = loadCategoryReferences(categoryDir);
+  return {
+    brand: mergedBrand,
+    references: [...mergedBrand.references, ...categoryRefs],
+    categoryName
+  };
+}
 
 // src/generate.ts
 async function generate(options) {
@@ -3212,7 +3285,16 @@ async function generate(options) {
     const model = resolveModel(options.model);
     let prompt = options.prompt;
     const contents = [];
-    if (options.brand) {
+    if (options.category) {
+      const categoryContext = loadCategory(options.category, options.imageGenDir || "image-gen");
+      prompt = augmentPromptWithBrand(prompt, categoryContext.brand);
+      for (const refPath of categoryContext.references) {
+        try {
+          contents.push(fileToInlinePart(refPath));
+        } catch {
+        }
+      }
+    } else if (options.brand) {
       const brand = parseBrandProfile(options.brand);
       prompt = augmentPromptWithBrand(prompt, brand);
       for (const refPath of brand.references) {
@@ -3283,6 +3365,7 @@ async function generate(options) {
         outputPath,
         model,
         aspectRatio: options.aspect || "default",
+        category: options.category || null,
         prompt,
         textResponse
       }
@@ -3370,12 +3453,309 @@ async function edit(options) {
   }
 }
 
+// src/init.ts
+var fs2 = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
+var BRAND_TEMPLATE = `---
+name: "Your Company Name"
+colors:
+  primary: "#000000"
+  secondary: "#666666"
+  accent: "#FF0000"
+  background: "#FFFFFF"
+style: "modern, clean, professional"
+tone: "trustworthy, approachable, innovative"
+references: []
+---
+
+# Global Brand Guidelines
+
+These guidelines apply to ALL image categories.
+
+## Brand Identity
+
+- Company name: Your Company
+- Industry: Your industry
+- Target audience: Your target audience
+
+## Visual Principles
+
+- Maintain consistency across all visual assets
+- Use brand colors as primary palette
+- Keep compositions clean and uncluttered
+
+## Do
+
+- Use brand colors consistently
+- Maintain visual hierarchy
+- Keep backgrounds clean
+
+## Don't
+
+- Use competing color schemes
+- Overcrowd compositions
+- Use low-quality or pixelated elements
+`;
+function getCategoryTemplate(categoryName) {
+  const titleName = categoryName.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return `---
+name: "${titleName}"
+colors: {}
+style: ""
+tone: ""
+references: []
+---
+
+# ${titleName} Guidelines
+
+These guidelines are layered ON TOP of the global brand.md.
+
+## Purpose
+
+Describe what this image category is used for.
+
+## Style Notes
+
+- Specific visual requirements for this category
+- Composition preferences
+- Lighting preferences
+
+## Do
+
+- Category-specific best practices
+
+## Don't
+
+- Category-specific things to avoid
+`;
+}
+async function setup(options) {
+  const imageGenDir = options.imageGenDir || "image-gen";
+  const absImageGenDir = path2.resolve(imageGenDir);
+  const created = [];
+  const alreadyExists = [];
+  if (!fs2.existsSync(absImageGenDir)) {
+    fs2.mkdirSync(absImageGenDir, { recursive: true });
+    created.push(imageGenDir);
+  }
+  const brandPath = path2.join(absImageGenDir, "brand.md");
+  if (!fs2.existsSync(brandPath)) {
+    fs2.writeFileSync(brandPath, BRAND_TEMPLATE);
+    created.push("brand.md");
+  } else {
+    alreadyExists.push("brand.md");
+  }
+  if (options.category) {
+    const categoryDir = path2.join(absImageGenDir, options.category);
+    const stylePath = path2.join(categoryDir, "style.md");
+    const refsDir = path2.join(categoryDir, "references");
+    if (!fs2.existsSync(categoryDir)) {
+      fs2.mkdirSync(categoryDir, { recursive: true });
+      fs2.mkdirSync(refsDir, { recursive: true });
+      fs2.writeFileSync(stylePath, getCategoryTemplate(options.category));
+      fs2.writeFileSync(path2.join(refsDir, ".gitkeep"), "# Add reference images here\n");
+      created.push(`${options.category}/`);
+      created.push(`${options.category}/style.md`);
+      created.push(`${options.category}/references/`);
+    } else {
+      alreadyExists.push(`${options.category}/`);
+    }
+  }
+  return {
+    success: true,
+    message: `Setup complete`,
+    data: {
+      imageGenDir,
+      created,
+      alreadyExists,
+      nextSteps: options.category ? [
+        `Edit ${imageGenDir}/brand.md with your brand guidelines`,
+        `Edit ${imageGenDir}/${options.category}/style.md with category-specific style`,
+        `Add reference images to ${imageGenDir}/${options.category}/references/`,
+        `Run /image-gen:build-cmds to generate commands`
+      ] : [
+        `Edit ${imageGenDir}/brand.md with your brand guidelines`,
+        `Run /image-gen:add-category <name> to add a category`,
+        `Run /image-gen:build-cmds to generate commands`
+      ]
+    }
+  };
+}
+async function addCategory(options) {
+  const imageGenDir = options.imageGenDir || "image-gen";
+  const absImageGenDir = path2.resolve(imageGenDir);
+  if (!fs2.existsSync(absImageGenDir)) {
+    return {
+      success: false,
+      error: `Directory not found: ${imageGenDir}. Run /image-gen:init first.`
+    };
+  }
+  const categoryDir = path2.join(absImageGenDir, options.category);
+  const stylePath = path2.join(categoryDir, "style.md");
+  const refsDir = path2.join(categoryDir, "references");
+  if (fs2.existsSync(categoryDir)) {
+    return {
+      success: false,
+      error: `Category already exists: ${options.category}`
+    };
+  }
+  fs2.mkdirSync(categoryDir, { recursive: true });
+  fs2.mkdirSync(refsDir, { recursive: true });
+  fs2.writeFileSync(stylePath, getCategoryTemplate(options.category));
+  fs2.writeFileSync(path2.join(refsDir, ".gitkeep"), "# Add reference images here\n");
+  return {
+    success: true,
+    message: `Category created: ${options.category}`,
+    data: {
+      category: options.category,
+      created: [
+        `${imageGenDir}/${options.category}/`,
+        `${imageGenDir}/${options.category}/style.md`,
+        `${imageGenDir}/${options.category}/references/`
+      ],
+      nextSteps: [
+        `Edit ${imageGenDir}/${options.category}/style.md with category-specific style`,
+        `Add reference images to ${imageGenDir}/${options.category}/references/`,
+        `Run /image-gen:build-cmds to generate the command`
+      ]
+    }
+  };
+}
+function generateCommandContent(categoryName, imageGenDir) {
+  const titleName = categoryName.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return `---
+name: ${categoryName}
+description: Generate ${titleName} images with brand consistency
+arguments:
+  - name: prompt
+    description: Description of the image to generate
+    required: true
+  - name: aspect
+    flag: --aspect
+    description: "Aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4)"
+    type: string
+  - name: output
+    flag: --output
+    description: Output file path
+    type: string
+---
+
+# ${titleName} Image Generation
+
+Generate images for the **${titleName}** category with automatic brand consistency.
+
+## Workflow
+
+1. Check environment:
+\`\`\`bash
+node \${CLAUDE_PLUGIN_ROOT}/dist/cli.js generate "" --check-env
+\`\`\`
+
+2. Generate the image:
+\`\`\`bash
+node \${CLAUDE_PLUGIN_ROOT}/dist/cli.js generate "$ARGUMENTS.prompt" \\
+  --category "${categoryName}" \\
+  --image-gen-dir "${imageGenDir}" \\
+  [--aspect "$ARGUMENTS.aspect"] \\
+  [--output "$ARGUMENTS.output"]
+\`\`\`
+
+## What Gets Loaded
+
+- **Global brand**: \`${imageGenDir}/brand.md\`
+- **Category style**: \`${imageGenDir}/${categoryName}/style.md\`
+- **Reference images**: \`${imageGenDir}/${categoryName}/references/*\`
+
+## Tips
+
+- Add reference images to \`${imageGenDir}/${categoryName}/references/\` for better style consistency
+- Edit \`${imageGenDir}/${categoryName}/style.md\` to refine the category-specific style
+- The global brand colors and tone are automatically applied
+`;
+}
+async function buildCommands(options) {
+  const imageGenDir = options.imageGenDir || "image-gen";
+  const outputDir = options.outputDir || ".claude/commands/image-gen";
+  const absImageGenDir = path2.resolve(imageGenDir);
+  if (!fs2.existsSync(absImageGenDir)) {
+    return {
+      success: false,
+      error: `Directory not found: ${imageGenDir}. Run /image-gen:init first.`
+    };
+  }
+  const categories = discoverCategories(imageGenDir);
+  if (categories.length === 0) {
+    return {
+      success: false,
+      error: `No categories found in ${imageGenDir}. Run /image-gen:add-category <name> first.`
+    };
+  }
+  const absOutputDir = path2.resolve(outputDir);
+  if (!fs2.existsSync(absOutputDir)) {
+    fs2.mkdirSync(absOutputDir, { recursive: true });
+  }
+  const created = [];
+  const skipped = [];
+  for (const category of categories) {
+    const commandPath = path2.join(absOutputDir, `${category}.md`);
+    if (fs2.existsSync(commandPath) && !options.force) {
+      skipped.push(category);
+      continue;
+    }
+    const content = generateCommandContent(category, imageGenDir);
+    fs2.writeFileSync(commandPath, content);
+    created.push(category);
+  }
+  const commands = categories.map((c) => `/image-gen:${c}`);
+  return {
+    success: true,
+    message: `Built ${created.length} command(s)`,
+    data: {
+      imageGenDir,
+      outputDir,
+      categories,
+      commands,
+      created,
+      skipped: skipped.length > 0 ? skipped : void 0
+    }
+  };
+}
+async function listCategories(imageGenDir = "image-gen") {
+  const absImageGenDir = path2.resolve(imageGenDir);
+  if (!fs2.existsSync(absImageGenDir)) {
+    return {
+      success: false,
+      error: `Directory not found: ${imageGenDir}. Run /image-gen:init first.`
+    };
+  }
+  const categories = discoverCategories(imageGenDir);
+  if (categories.length === 0) {
+    return {
+      success: true,
+      message: "No categories found",
+      data: {
+        imageGenDir,
+        categories: [],
+        commands: []
+      }
+    };
+  }
+  return {
+    success: true,
+    data: {
+      imageGenDir,
+      categories,
+      commands: categories.map((c) => `/image-gen:${c}`)
+    }
+  };
+}
+
 // src/cli.ts
 function loadEnvLocal() {
-  const envPath = path2.resolve(__dirname, "..", ".env.local");
-  if (!fs2.existsSync(envPath))
+  const envPath = path3.resolve(__dirname, "..", ".env.local");
+  if (!fs3.existsSync(envPath))
     return;
-  const lines = fs2.readFileSync(envPath, "utf-8").split("\n");
+  const lines = fs3.readFileSync(envPath, "utf-8").split("\n");
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#"))
@@ -3396,7 +3776,7 @@ function loadEnvLocal() {
 loadEnvLocal();
 var program2 = new Command();
 program2.name("image-gen-cli").description("AI image generation and editing CLI using Google Gemini").version("1.0.0");
-program2.command("generate").description("Generate an image from a text prompt").argument("<prompt>", "Text prompt describing the image to generate").option("-o, --output <path>", "Output file path").option("-a, --aspect <ratio>", "Aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4)").option("-m, --model <model>", "Model to use (flash, pro)", "flash").option("-s, --seed <number>", "Seed for reproducible generation", parseInt).option("--size <size>", "Image size hint").option("-r, --ref <paths...>", "Reference image paths").option("--brand <path>", "Brand profile markdown file path").option("--check-env", "Only check if GEMINI_API_KEY is set").action(async (prompt, options) => {
+program2.command("generate").description("Generate an image from a text prompt").argument("<prompt>", "Text prompt describing the image to generate").option("-o, --output <path>", "Output file path").option("-a, --aspect <ratio>", "Aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4)").option("-m, --model <model>", "Model to use (flash, pro)", "flash").option("-s, --seed <number>", "Seed for reproducible generation", parseInt).option("--size <size>", "Image size hint").option("-r, --ref <paths...>", "Reference image paths").option("--brand <path>", "Brand profile markdown file path").option("-c, --category <name>", "Category name (loads from image-gen/<category>/)").option("--image-gen-dir <path>", "Path to image-gen directory", "image-gen").option("--check-env", "Only check if GEMINI_API_KEY is set").action(async (prompt, options) => {
   if (options.checkEnv) {
     const hasKey = !!process.env.GEMINI_API_KEY;
     console.log(JSON.stringify(
@@ -3412,7 +3792,9 @@ program2.command("generate").description("Generate an image from a text prompt")
     seed: options.seed,
     size: options.size,
     ref: options.ref,
-    brand: options.brand
+    brand: options.brand,
+    category: options.category,
+    imageGenDir: options.imageGenDir
   });
   console.log(JSON.stringify(result, null, 2));
   if (!result.success)
@@ -3434,6 +3816,40 @@ program2.command("edit").description("Edit an existing image with instructions")
     model: options.model,
     size: options.size
   });
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.success)
+    process.exit(1);
+});
+program2.command("setup").description("Initialize image-gen directory with brand.md and optional first category").option("--image-gen-dir <path>", "Path to image-gen directory", "image-gen").option("-c, --category <name>", "Create first category during setup").action(async (options) => {
+  const result = await setup({
+    imageGenDir: options.imageGenDir,
+    category: options.category
+  });
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.success)
+    process.exit(1);
+});
+program2.command("add-category").description("Add a new image category").argument("<name>", "Category name (e.g., property-interiors, avatars)").option("--image-gen-dir <path>", "Path to image-gen directory", "image-gen").action(async (name, options) => {
+  const result = await addCategory({
+    imageGenDir: options.imageGenDir,
+    category: name
+  });
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.success)
+    process.exit(1);
+});
+program2.command("build-cmds").description("Generate slash commands from discovered categories").option("--image-gen-dir <path>", "Path to image-gen directory", "image-gen").option("--output-dir <path>", "Output directory for generated commands", ".claude/commands/image-gen").option("-f, --force", "Overwrite existing command files").action(async (options) => {
+  const result = await buildCommands({
+    imageGenDir: options.imageGenDir,
+    outputDir: options.outputDir,
+    force: options.force
+  });
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.success)
+    process.exit(1);
+});
+program2.command("list-categories").description("List discovered categories from image-gen directory").option("--image-gen-dir <path>", "Path to image-gen directory", "image-gen").action(async (options) => {
+  const result = await listCategories(options.imageGenDir);
   console.log(JSON.stringify(result, null, 2));
   if (!result.success)
     process.exit(1);

@@ -49,6 +49,8 @@ node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js generate <prompt> [options]
 | Size | `--size <size>` | Image size hint | Model default |
 | References | `-r, --ref <paths...>` | Reference image paths | None |
 | Brand | `--brand <path>` | Brand profile markdown path | None |
+| Category | `-c, --category <name>` | Category name (loads from image-gen/) | None |
+| Image-gen dir | `--image-gen-dir <path>` | Path to image-gen directory | `image-gen` |
 | Check env | `--check-env` | Only verify API key is set | - |
 
 ### edit
@@ -84,9 +86,49 @@ node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js edit <image> <instruction> [options]
 | `4:3` | Blog images, standard photos |
 | `3:4` | Portrait photos, Pinterest pins |
 
-## Brand Profile Discovery
+## Category Workflows (Recommended)
 
-When generating images, check for brand profiles to maintain visual consistency:
+For projects with multiple image types, use the category system:
+
+### Check for Categories
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js list-categories
+```
+
+### Generate with Category
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js generate "Modern kitchen" \
+  --category property-interiors \
+  -o kitchen.png
+```
+
+This automatically loads:
+- `image-gen/brand.md` (global brand)
+- `image-gen/property-interiors/style.md` (category style)
+- `image-gen/property-interiors/references/*` (reference images)
+
+### Setup Category Workflow
+
+If the project doesn't have an `image-gen/` directory yet:
+
+```bash
+# First-time setup with optional first category
+node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js setup [--category <name>]
+
+# Add more categories
+node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js add-category <name>
+
+# Build slash commands from categories
+node ${CLAUDE_PLUGIN_ROOT}/dist/cli.js build-cmds
+```
+
+This creates commands in `.claude/commands/image-gen/` for each category.
+
+## Brand Profile Discovery (Legacy)
+
+For simpler use cases without categories:
 
 1. Look for `brand-profile.md` in the current project root
 2. Look for brand profiles in the project's `brand-profiles/` directory
